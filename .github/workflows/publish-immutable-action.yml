@@ -6,6 +6,7 @@ on:
 
 jobs:
   publish:
+    if: github.repository == 'actions/delete-package-versions' || vars.IMMUTABLE_ACTION_PUBLISHING_ENABLED == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

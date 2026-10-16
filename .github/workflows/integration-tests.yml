@@ -6,6 +6,7 @@ on:
 
 jobs:
   repository_dispatch_event:
+    if: github.repository == 'actions/delete-package-versions' || vars.INTEGRATION_TESTS_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Repository Dispatch Event

@@ -440,3 +440,10 @@ The scripts and documentation in this project are released under the [MIT Licens
 [api]: https://docs.github.com/en/rest/packages
 [token]: https://help.github.com/en/packages/publishing-and-managing-packages/about-github-packages#about-tokens
 [secret]: https://help.github.com/en/actions/configuring-and-managing-workflows/creating-and-storing-encrypted-secrets
+
+
+### Optional integration workflows in forks
+
+The upstream integration-test dispatch is disabled by default in forks. To enable it, set the repository variable `INTEGRATION_TESTS_ENABLED` to `true` and configure the `ITS_PAT` and `ITS_REPO` secrets. The token must be able to send repository-dispatch events to the target repository named by `ITS_REPO` (`owner/repository`). The original upstream repository retains its existing behavior.
+
+The inherited immutable-action publishing workflow is also disabled by default in forks. Its action is currently documented as not ready for public use. Enable it with `IMMUTABLE_ACTION_PUBLISHING_ENABLED=true` only when your repository has access to that publishing feature; its job requires `contents: read`, `id-token: write`, and `packages: write`. Ordinary Git tags and GitHub releases can publish this JavaScript action without that optional OCI publishing workflow.
