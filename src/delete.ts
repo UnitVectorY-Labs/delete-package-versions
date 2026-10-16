@@ -19,7 +19,8 @@ export function getVersionIds(
   packageType: string,
   numVersions: number,
   page: number,
-  token: string
+  token: string,
+  requireContainerTagMetadata = false
 ): Observable<RestVersionInfo[]> {
   return getOldestVersions(
     owner,
@@ -27,7 +28,8 @@ export function getVersionIds(
     packageType,
     numVersions,
     page,
-    token
+    token,
+    requireContainerTagMetadata
   ).pipe(
     expand(value =>
       value.paginate
@@ -37,7 +39,8 @@ export function getVersionIds(
             packageType,
             numVersions,
             value.page + 1,
-            token
+            token,
+            requireContainerTagMetadata
           )
         : EMPTY
     ),
@@ -58,7 +61,9 @@ export function finalIds(input: Input): Observable<string[]> {
       input.packageType,
       RATE_LIMIT,
       1,
-      input.token
+      input.token,
+      input.packageType === 'container' &&
+        input.deleteUntaggedVersions === 'true'
     ).pipe(
       // Discover references before ignore/retention filters can hide tagged roots.
       concatMap(async versions => {

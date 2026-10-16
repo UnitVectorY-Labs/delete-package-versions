@@ -24,9 +24,9 @@ const operators_1 = __nccwpck_require__(749);
 const version_1 = __nccwpck_require__(4428);
 exports.RATE_LIMIT = 100;
 let totalCount = 0;
-function getVersionIds(owner, packageName, packageType, numVersions, page, token) {
-    return (0, version_1.getOldestVersions)(owner, packageName, packageType, numVersions, page, token).pipe((0, operators_1.expand)(value => value.paginate
-        ? (0, version_1.getOldestVersions)(owner, packageName, packageType, numVersions, value.page + 1, token)
+function getVersionIds(owner, packageName, packageType, numVersions, page, token, requireContainerTagMetadata = false) {
+    return (0, version_1.getOldestVersions)(owner, packageName, packageType, numVersions, page, token, requireContainerTagMetadata).pipe((0, operators_1.expand)(value => value.paginate
+        ? (0, version_1.getOldestVersions)(owner, packageName, packageType, numVersions, value.page + 1, token, requireContainerTagMetadata)
         : rxjs_1.EMPTY), (0, operators_1.tap)(value => (totalCount = totalCount + value.totalCount)), (0, operators_1.reduce)((acc, value) => acc.concat(value.versions), []));
 }
 exports.getVersionIds = getVersionIds;
@@ -36,7 +36,8 @@ function finalIds(input) {
         return (0, rxjs_1.of)(input.packageVersionIds.slice(0, toDelete));
     }
     if (input.hasOldestVersionQueryInfo()) {
-        return getVersionIds(input.owner, input.packageName, input.packageType, exports.RATE_LIMIT, 1, input.token).pipe(
+        return getVersionIds(input.owner, input.packageName, input.packageType, exports.RATE_LIMIT, 1, input.token, input.packageType === 'container' &&
+            input.deleteUntaggedVersions === 'true').pipe(
         // Discover references before ignore/retention filters can hide tagged roots.
         (0, operators_1.concatMap)((versions) => __awaiter(this, void 0, void 0, function* () {
             if (input.packageType === 'container' &&
@@ -439,7 +440,7 @@ exports.getOldestVersions = void 0;
 const rxjs_1 = __nccwpck_require__(1752);
 const operators_1 = __nccwpck_require__(749);
 const rest_1 = __nccwpck_require__(5375);
-function getOldestVersions(owner, packageName, packageType, numVersions, page, token) {
+function getOldestVersions(owner, packageName, packageType, numVersions, page, token, requireContainerTagMetadata = false) {
     const octokit = new rest_1.Octokit({
         auth: token,
         baseUrl: process.env.GITHUB_API_URL || 'https://api.github.com'
@@ -459,18 +460,17 @@ function getOldestVersions(owner, packageName, packageType, numVersions, page, t
     }), (0, operators_1.map)(response => {
         const resp = {
             versions: response.data.map((version) => {
-                var _a;
+                var _a, _b;
+                if (requireContainerTagMetadata &&
+                    package_type === 'container' &&
+                    !Array.isArray((_b = (_a = version.metadata) === null || _a === void 0 ? void 0 : _a.container) === null || _b === void 0 ? void 0 : _b.tags)) {
+                    throw new Error('Container tag metadata is incomplete; refusing cleanup');
+                }
                 let tagged = false;
                 if (package_type === 'container' &&
                     version.metadata &&
                     version.metadata.container) {
-                    if (!Array.isArray(version.metadata.container.tags)) {
-                        throw new Error('Container tag metadata is incomplete; refusing cleanup');
-                    }
                     tagged = version.metadata.container.tags.length > 0;
-                }
-                if (package_type === 'container' && !((_a = version.metadata) === null || _a === void 0 ? void 0 : _a.container)) {
-                    throw new Error('Container tag metadata is incomplete; refusing cleanup');
                 }
                 return {
                     id: version.id,

@@ -374,3 +374,27 @@ test('rejects a looping tag pagination link', async () => {
     'pagination'
   )
 })
+
+test.each([
+  {minVersionsToKeep: 0, numOldVersionsToDelete: 0},
+  {minVersionsToKeep: -1, numOldVersionsToDelete: 1}
+])(
+  'other container deletion modes retain missing-metadata behavior %#',
+  async retention => {
+    server.use(
+      rest.get(
+        'https://api.github.com/users/test-owner/packages/container/nested%2Fimage/versions',
+        (_req, res, ctx) =>
+          res(ctx.json([{id: 1, name: leaf.digest, created_at: '2000-01-01'}]))
+      )
+    )
+    expect(
+      await firstValueFrom(
+        finalIds(
+          new Input({...input, ...retention, deleteUntaggedVersions: 'false'})
+        )
+      )
+    ).toEqual(['1'])
+    expect(requests).toEqual([])
+  }
+)
