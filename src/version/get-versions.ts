@@ -63,7 +63,18 @@ export function getOldestVersions(
             version.metadata &&
             version.metadata.container
           ) {
+            if (!Array.isArray(version.metadata.container.tags)) {
+              throw new Error(
+                'Container tag metadata is incomplete; refusing cleanup'
+              )
+            }
             tagged = version.metadata.container.tags.length > 0
+          }
+
+          if (package_type === 'container' && !version.metadata?.container) {
+            throw new Error(
+              'Container tag metadata is incomplete; refusing cleanup'
+            )
           }
 
           return {
