@@ -21,7 +21,7 @@ jobs:
     - uses: actions/setup-node@v7
       with:
         node-version: 24
-    - run: npm install
+    - run: npm ci
       name: NPM Install
     - run: npm run pack
       name: Check Format, Lint, Run Unit Tests, Build and Package

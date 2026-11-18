@@ -1,8 +1,8 @@
 {
-  "name": "typescript-action",
+  "name": "delete-package-versions",
   "version": "0.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "Delete GitHub package versions with retention and container reference protection",
   "main": "lib/main.js",
   "scripts": {
     "format": "prettier --write **/*.ts",
@@ -15,30 +15,30 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/UnitVectorY-Labs/delete-package-versions.git"
   },
   "keywords": [
     "actions",
-    "node",
-    "setup"
+    "github-packages",
+    "retention"
   ],
-  "author": "YourNameOrOrganization",
+  "author": "UnitVectorY-Labs",
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.10.1",
-    "@actions/github": "^6.0.0",
-    "@octokit/rest": "^20.0.2",
+    "@actions/core": "^2.0.3",
+    "@actions/github": "^8.0.1",
+    "@octokit/rest": "^20.1.2",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "24.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/eslint-plugin": "^8.73.0",
+    "@typescript-eslint/parser": "^8.73.0",
     "@vercel/ncc": "^0.38.1",
-    "eslint": "^8.57.0",
-    "eslint-plugin-github": "^4.10.2",
-    "eslint-plugin-jest": "^28.2.0",
+    "eslint": "^9.39.5",
+    "eslint-plugin-github": "^6.1.2",
+    "eslint-plugin-jest": "^29.17.1",
     "jest": "^29.7.0",
     "jest-circus": "^29.7.0",
     "js-yaml": "^4.3.2",
