@@ -1,4 +1,3 @@
-/* eslint-disable i18n-text/no-en */
 import {createHash} from 'crypto'
 import {request} from 'https'
 import {Input} from '../input'
