@@ -17,7 +17,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.deleteVersions = exports.finalIds = exports.getVersionIds = exports.RATE_LIMIT = void 0;
+exports.RATE_LIMIT = void 0;
+exports.getVersionIds = getVersionIds;
+exports.finalIds = finalIds;
+exports.deleteVersions = deleteVersions;
 const container_references_1 = __nccwpck_require__(5416);
 const rxjs_1 = __nccwpck_require__(1752);
 const operators_1 = __nccwpck_require__(7647);
@@ -29,7 +32,6 @@ function getVersionIds(owner, packageName, packageType, numVersions, page, token
         ? (0, version_1.getOldestVersions)(owner, packageName, packageType, numVersions, value.page + 1, token, requireContainerTagMetadata)
         : rxjs_1.EMPTY), (0, operators_1.tap)(value => (totalCount = totalCount + value.totalCount)), (0, operators_1.reduce)((acc, value) => acc.concat(value.versions), []));
 }
-exports.getVersionIds = getVersionIds;
 function finalIds(input) {
     if (input.packageVersionIds.length > 0) {
         const toDelete = Math.min(input.packageVersionIds.length, exports.RATE_LIMIT);
@@ -78,7 +80,6 @@ function finalIds(input) {
     }
     return (0, rxjs_1.throwError)("Could not get packageVersionIds. Explicitly specify using the 'package-version-ids' input");
 }
-exports.finalIds = finalIds;
 function deleteVersions(input) {
     if (!input.token) {
         return (0, rxjs_1.throwError)('No token found');
@@ -93,7 +94,6 @@ function deleteVersions(input) {
     const result = finalIds(input);
     return result.pipe((0, operators_1.concatMap)(ids => (0, version_1.deletePackageVersions)(ids, input.owner, input.packageName, input.packageType, input.token)));
 }
-exports.deleteVersions = deleteVersions;
 
 
 /***/ }),
@@ -185,10 +185,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.protectedContainerDigests = void 0;
+exports.protectedContainerDigests = protectedContainerDigests;
 const crypto_1 = __nccwpck_require__(6113);
-const https_1 = __nccwpck_require__(5687);
+const https_1 = __importDefault(__nccwpck_require__(5687));
 const mediaTypes = [
     'application/vnd.oci.image.index.v1+json',
     'application/vnd.docker.distribution.manifest.list.v2+json',
@@ -209,7 +212,7 @@ function digest(value) {
 function get(url, authorization) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise((resolve, reject) => {
-            const req = (0, https_1.request)(url, { headers: { Authorization: authorization, Accept: mediaTypes.join(', ') } }, response => {
+            const req = https_1.default.request(url, { headers: { Authorization: authorization, Accept: mediaTypes.join(', ') } }, response => {
                 if (response.statusCode !== 200) {
                     response.resume();
                     reject(new Error(`Container registry request failed (HTTP ${response.statusCode}); refusing cleanup`));
@@ -304,8 +307,8 @@ function protectedContainerDigests(input, versions) {
         const authorization = `Bearer ${token}`;
         const base = `https://ghcr.io/v2/${repository}`;
         function tags() {
-            var _a;
             return __awaiter(this, void 0, void 0, function* () {
+                var _a;
                 const names = new Set();
                 const pages = new Set();
                 let next = new URL(`${base}/tags/list?n=100`);
@@ -374,7 +377,6 @@ function protectedContainerDigests(input, versions) {
         return protectedDigests;
     });
 }
-exports.protectedContainerDigests = protectedContainerDigests;
 
 
 /***/ }),
@@ -385,7 +387,8 @@ exports.protectedContainerDigests = protectedContainerDigests;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.deletePackageVersions = exports.deletePackageVersion = void 0;
+exports.deletePackageVersion = deletePackageVersion;
+exports.deletePackageVersions = deletePackageVersions;
 const rxjs_1 = __nccwpck_require__(1752);
 const operators_1 = __nccwpck_require__(7647);
 const rest_1 = __nccwpck_require__(5375);
@@ -410,7 +413,6 @@ function deletePackageVersion(packageVersionId, owner, packageName, packageType,
             : `${msg} ${err.message} \n${deleted - 1} versions deleted till now.`);
     }), (0, operators_1.map)(response => response.status === 204));
 }
-exports.deletePackageVersion = deletePackageVersion;
 function deletePackageVersions(packageVersionIds, owner, packageName, packageType, token) {
     if (packageVersionIds.length === 0) {
         return (0, rxjs_1.of)(true);
@@ -423,7 +425,6 @@ function deletePackageVersions(packageVersionIds, owner, packageName, packageTyp
     console.log(`Total versions deleted till now: ${deleted}`);
     return (0, rxjs_1.merge)(...deletes);
 }
-exports.deletePackageVersions = deletePackageVersions;
 
 
 /***/ }),
@@ -434,7 +435,7 @@ exports.deletePackageVersions = deletePackageVersions;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getOldestVersions = void 0;
+exports.getOldestVersions = getOldestVersions;
 /* eslint-disable @typescript-eslint/no-unused-vars */
 const rxjs_1 = __nccwpck_require__(1752);
 const operators_1 = __nccwpck_require__(7647);
@@ -485,7 +486,6 @@ function getOldestVersions(owner, packageName, packageType, numVersions, page, t
         return resp;
     }));
 }
-exports.getOldestVersions = getOldestVersions;
 
 
 /***/ }),

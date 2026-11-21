@@ -9,7 +9,7 @@
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts --fix",
     "lint-check": "eslint src/**/*.ts",
-    "test": "jest",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "build": "npm run format-check && npm run lint-check && npm run test && tsc",
     "pack": "rm -rf ./lib ./dist && npm run build && ncc build",
     "bundle": "rm -rf ./lib ./dist && tsc && ncc build"
@@ -32,7 +32,7 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.12",
+    "@types/jest": "^29.5.14",
     "@types/node": "24.0.0",
     "@typescript-eslint/eslint-plugin": "^8.73.0",
     "@typescript-eslint/parser": "^8.73.0",
@@ -45,7 +45,7 @@
     "js-yaml": "^4.3.2",
     "msw": "^3.0.6",
     "prettier": "^3.2.5",
-    "ts-jest": "^29.1.2",
-    "typescript": "5.2.2"
+    "ts-jest": "^29.4.15",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,4 +1,4 @@
-import {rest} from 'msw'
+import {http, HttpResponse} from 'msw'
 import {setupServer} from 'msw/node'
 import {deletePackageVersion, deletePackageVersions} from '../../src/version'
 
@@ -16,11 +16,9 @@ describe('delete tests - mock rest', () => {
 
   it('deletePackageVersion', done => {
     server.use(
-      rest.delete(
+      http.delete(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions/123',
-        (req, res, ctx) => {
-          return res(ctx.status(204))
-        }
+        () => new HttpResponse(null, {status: 204})
       )
     )
 
@@ -40,11 +38,9 @@ describe('delete tests - mock rest', () => {
     let success = 0
 
     server.use(
-      rest.delete(
+      http.delete(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions/*',
-        (req, res, ctx) => {
-          return res(ctx.status(204))
-        }
+        () => new HttpResponse(null, {status: 204})
       )
     )
 
@@ -77,11 +73,9 @@ describe('delete tests - mock rest', () => {
     let success = 0
 
     server.use(
-      rest.delete(
+      http.delete(
         'https://github.someghesinstance.com/api/v3/users/test-owner/packages/npm/test-package/versions/*',
-        (req, res, ctx) => {
-          return res(ctx.status(204))
-        }
+        () => new HttpResponse(null, {status: 204})
       )
     )
 
@@ -112,11 +106,9 @@ describe('delete tests - mock rest', () => {
 
   it('deletePackageVersion - API error', done => {
     server.use(
-      rest.delete(
+      http.delete(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions/123',
-        (req, res, ctx) => {
-          return res(ctx.status(500))
-        }
+        () => new HttpResponse(null, {status: 500})
       )
     )
 
@@ -142,13 +134,13 @@ describe('delete tests - mock rest', () => {
     let failed = 0
 
     server.use(
-      rest.delete(
+      http.delete(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions/:versionId',
-        (req, res, ctx) => {
-          if (req.params.versionId === '456') {
-            return res(ctx.status(500))
+        ({params}) => {
+          if (params.versionId === '456') {
+            return new HttpResponse(null, {status: 500})
           }
-          return res(ctx.status(204))
+          return new HttpResponse(null, {status: 204})
         }
       )
     )
