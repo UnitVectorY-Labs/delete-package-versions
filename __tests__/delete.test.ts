@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import {rest} from 'msw'
+import {http, HttpResponse} from 'msw'
 import {setupServer} from 'msw/node'
 import {Input, InputParams} from '../src/input'
 import {image} from './version/container.mock'
@@ -37,11 +37,11 @@ describe('index tests -- call rest', () => {
     const versions = getMockedVersionsResponse(numVersions)
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        () => {
           apiCalled++
-          return res(ctx.status(200), ctx.json(versions))
+          return HttpResponse.json(versions)
         }
       )
     )
@@ -65,11 +65,11 @@ describe('index tests -- call rest', () => {
     const versions = getMockedVersionsResponse(numVersions)
 
     server.use(
-      rest.get(
+      http.get(
         'https://github.someghesinstance.com/api/v3/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        () => {
           apiCalled++
-          return res(ctx.status(200), ctx.json(versions))
+          return HttpResponse.json(versions)
         }
       )
     )
@@ -96,17 +96,17 @@ describe('index tests -- call rest', () => {
     const secondPage = versions.slice(RATE_LIMIT)
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        ({request}) => {
           apiCalled++
-          const page = req.url.searchParams.get('page')
+          const page = new URL(request.url).searchParams.get('page')
           if (page === '1') {
-            return res(ctx.status(200), ctx.json(firstPage))
+            return HttpResponse.json(firstPage)
           } else if (page === '2') {
-            return res(ctx.status(200), ctx.json(secondPage))
+            return HttpResponse.json(secondPage)
           } else {
-            return res(ctx.status(200), ctx.json([]))
+            return HttpResponse.json([])
           }
         }
       )
@@ -135,17 +135,17 @@ describe('index tests -- call rest', () => {
     const secondPage = versions.slice(0, RATE_LIMIT).reverse()
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        ({request}) => {
           apiCalled++
-          const page = req.url.searchParams.get('page')
+          const page = new URL(request.url).searchParams.get('page')
           if (page === '1') {
-            return res(ctx.status(200), ctx.json(firstPage))
+            return HttpResponse.json(firstPage)
           } else if (page === '2') {
-            return res(ctx.status(200), ctx.json(secondPage))
+            return HttpResponse.json(secondPage)
           } else {
-            return res(ctx.status(200), ctx.json([]))
+            return HttpResponse.json([])
           }
         }
       )
@@ -168,11 +168,11 @@ describe('index tests -- call rest', () => {
     const versions = getMockedVersionsResponse(numVersions)
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        () => {
           apiCalled++
-          return res(ctx.status(200), ctx.json(versions))
+          return HttpResponse.json(versions)
         }
       )
     )
@@ -196,11 +196,11 @@ describe('index tests -- call rest', () => {
     const versions = getMockedVersionsResponse(numVersions)
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        () => {
           apiCalled++
-          return res(ctx.status(200), ctx.json(versions))
+          return HttpResponse.json(versions)
         }
       )
     )
@@ -230,11 +230,11 @@ describe('index tests -- call rest', () => {
     }
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        () => {
           apiCalled++
-          return res(ctx.status(200), ctx.json(versions))
+          return HttpResponse.json(versions)
         }
       )
     )
@@ -278,16 +278,15 @@ describe('index tests -- call rest', () => {
     for (const version of untaggedVersions)
       version.name = `sha256:${version.id.toString(16).padStart(64, '0')}`
     server.use(
-      rest.get('https://ghcr.io/token', (_req, res, ctx) =>
-        res(ctx.json({token: 'registry-test-token'}))
+      http.get('https://ghcr.io/token', () =>
+        HttpResponse.json({token: 'registry-test-token'})
       ),
-      rest.get(
-        'https://ghcr.io/v2/test-owner/test-package/tags/list',
-        (_req, res, ctx) => res(ctx.json({tags: []}))
+      http.get('https://ghcr.io/v2/test-owner/test-package/tags/list', () =>
+        HttpResponse.json({tags: []})
       ),
-      rest.get(
+      http.get(
         'https://ghcr.io/v2/test-owner/test-package/manifests/:ref',
-        (_req, res, ctx) => res(ctx.body(root.body))
+        () => new HttpResponse(root.body)
       )
     )
     const versions = taggedVersions.concat(untaggedVersions)
@@ -295,11 +294,11 @@ describe('index tests -- call rest', () => {
     let apiCalled = 0
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/container/test-package/versions',
-        (req, res, ctx) => {
+        () => {
           apiCalled++
-          return res(ctx.status(200), ctx.json(versions))
+          return HttpResponse.json(versions)
         }
       )
     )
@@ -330,17 +329,17 @@ describe('index tests -- call rest', () => {
     const secondPage = versions.slice(RATE_LIMIT)
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        ({request}) => {
           apiCalled++
-          const page = req.url.searchParams.get('page')
+          const page = new URL(request.url).searchParams.get('page')
           if (page === '1') {
-            return res(ctx.status(200), ctx.json(firstPage))
+            return HttpResponse.json(firstPage)
           } else if (page === '2') {
-            return res(ctx.status(500), ctx.json([]))
+            return HttpResponse.json([], {status: 500})
           } else {
-            return res(ctx.status(200), ctx.json([]))
+            return HttpResponse.json([])
           }
         }
       )
@@ -405,22 +404,22 @@ describe('index tests -- call rest', () => {
     const versionsDeleted: string[] = []
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        () => {
           getApiCalled++
-          return res(ctx.status(200), ctx.json(versions))
+          return HttpResponse.json(versions)
         }
       )
     )
 
     server.use(
-      rest.delete(
+      http.delete(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions/:versionId',
-        (req, res, ctx) => {
+        ({params}) => {
           deleteApiCalled++
-          versionsDeleted.push(req.params.versionId as string)
-          return res(ctx.status(204))
+          versionsDeleted.push(params.versionId as string)
+          return new HttpResponse(null, {status: 204})
         }
       )
     )
@@ -450,22 +449,22 @@ describe('index tests -- call rest', () => {
     const versionsDeleted: string[] = []
 
     server.use(
-      rest.get(
+      http.get(
         'https://github.someghesinstance.com/api/v3/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
+        () => {
           getApiCalled++
-          return res(ctx.status(200), ctx.json(versions))
+          return HttpResponse.json(versions)
         }
       )
     )
 
     server.use(
-      rest.delete(
+      http.delete(
         'https://github.someghesinstance.com/api/v3/users/test-owner/packages/npm/test-package/versions/:versionId',
-        (req, res, ctx) => {
+        ({params}) => {
           deleteApiCalled++
-          versionsDeleted.push(req.params.versionId as string)
-          return res(ctx.status(204))
+          versionsDeleted.push(params.versionId as string)
+          return new HttpResponse(null, {status: 204})
         }
       )
     )

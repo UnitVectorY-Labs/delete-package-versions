@@ -1,5 +1,5 @@
 import {createHash} from 'crypto'
-import {rest} from 'msw'
+import {http, HttpResponse} from 'msw'
 import {setupServer} from 'msw/node'
 import {firstValueFrom} from 'rxjs'
 import {Input} from '../src/input'
@@ -41,7 +41,7 @@ function version(ref: string, tagged = false, id = 1): RestVersionInfo {
   }
 }
 
-beforeAll(() => server.listen({onUnhandledRequest: 'error'}))
+beforeAll(() => server.listen({onUnhandledFrame: 'error'}))
 afterAll(() => server.close())
 beforeEach(() => {
   requests = []
@@ -53,27 +53,25 @@ beforeEach(() => {
     [attestation.digest, attestation.body]
   ])
   server.use(
-    rest.get('https://ghcr.io/token', (req, res, ctx) => {
-      expect(req.url.searchParams.get('scope')).toBe(
+    http.get('https://ghcr.io/token', ({request}) => {
+      expect(new URL(request.url).searchParams.get('scope')).toBe(
         'repository:test-owner/nested/image:pull'
       )
-      expect(req.headers.get('authorization')).toBe(
+      expect(request.headers.get('authorization')).toBe(
         `Basic ${Buffer.from(`${process.env.GITHUB_ACTOR || input.owner}:${input.token}`).toString('base64')}`
       )
-      return res(ctx.json({token: 'registry-test-token'}))
+      return HttpResponse.json({token: 'registry-test-token'})
     }),
-    rest.get(`${base}/tags/list`, (_req, res, ctx) =>
-      res(ctx.json({tags: ['latest']}))
-    ),
-    rest.get(`${base}/manifests/:ref`, (req, res, ctx) => {
-      expect(req.headers.get('authorization')).toBe(
+    http.get(`${base}/tags/list`, () => HttpResponse.json({tags: ['latest']})),
+    http.get(`${base}/manifests/:ref`, ({request, params}) => {
+      expect(request.headers.get('authorization')).toBe(
         'Bearer registry-test-token'
       )
-      const ref = req.params.ref as string
+      const ref = params.ref as string
       requests.push(ref)
       return documents.has(ref)
-        ? res(ctx.body(documents.get(ref)!))
-        : res(ctx.status(404))
+        ? new HttpResponse(documents.get(ref)!)
+        : new HttpResponse(null, {status: 404})
     })
   )
 })
@@ -97,9 +95,7 @@ test('uses registry tags even when new tagged roots are absent from package meta
 
 test('also protects tagged package versions absent from registry tag listing', async () => {
   server.use(
-    rest.get(`${base}/tags/list`, (_req, res, ctx) =>
-      res(ctx.json({tags: null}))
-    )
+    http.get(`${base}/tags/list`, () => HttpResponse.json({tags: null}))
   )
   expect(
     await protectedContainerDigests(input, [version(root.digest, true)])
@@ -118,15 +114,16 @@ test('follows tag pagination', async () => {
   const other = image(leaf.digest, dockerImageType)
   documents.set('older', other.body)
   server.use(
-    rest.get(`${base}/tags/list`, (req, res, ctx) =>
-      req.url.searchParams.has('last')
-        ? res(ctx.json({tags: ['older']}))
-        : res(
-            ctx.set(
-              'Link',
-              `</v2/test-owner/nested/image/tags/list?last=latest&n=100>; rel="next"`
-            ),
-            ctx.json({tags: ['latest']})
+    http.get(`${base}/tags/list`, ({request}) =>
+      new URL(request.url).searchParams.has('last')
+        ? HttpResponse.json({tags: ['older']})
+        : HttpResponse.json(
+            {tags: ['latest']},
+            {
+              headers: {
+                Link: `</v2/test-owner/nested/image/tags/list?last=latest&n=100>; rel="next"`
+              }
+            }
           )
     )
   )
@@ -135,10 +132,10 @@ test('follows tag pagination', async () => {
 
 test('rejects pagination to another host without sending it credentials', async () => {
   server.use(
-    rest.get(`${base}/tags/list`, (_req, res, ctx) =>
-      res(
-        ctx.set('Link', '<https://example.com/steal>; rel="next"'),
-        ctx.json({tags: []})
+    http.get(`${base}/tags/list`, () =>
+      HttpResponse.json(
+        {tags: []},
+        {headers: {Link: '<https://example.com/steal>; rel="next"'}}
       )
     )
   )
@@ -151,9 +148,7 @@ test.each([401, 403, 404, 429, 500])(
   'fails closed on registry HTTP %s',
   async status => {
     server.use(
-      rest.get(`${base}/manifests/:ref`, (_req, res, ctx) =>
-        res(ctx.status(status))
-      )
+      http.get(`${base}/manifests/:ref`, () => new HttpResponse(null, {status}))
     )
     await expect(protectedContainerDigests(input, [])).rejects.toThrow(
       `HTTP ${status}`
@@ -203,8 +198,10 @@ test.each([
 test('fails closed if tags are added during discovery', async () => {
   let listings = 0
   server.use(
-    rest.get(`${base}/tags/list`, (_req, res, ctx) =>
-      res(ctx.json({tags: ++listings === 1 ? ['latest'] : ['latest', 'new']}))
+    http.get(`${base}/tags/list`, () =>
+      HttpResponse.json({
+        tags: ++listings === 1 ? ['latest'] : ['latest', 'new']
+      })
     )
   )
   await expect(protectedContainerDigests(input, [])).rejects.toThrow(
@@ -215,8 +212,9 @@ test('fails closed if tags are added during discovery', async () => {
 test('fails closed if an existing tag moves during discovery', async () => {
   let reads = 0
   server.use(
-    rest.get(`${base}/manifests/latest`, (_req, res, ctx) =>
-      res(ctx.body(++reads === 1 ? root.body : leaf.body))
+    http.get(
+      `${base}/manifests/latest`,
+      () => new HttpResponse(++reads === 1 ? root.body : leaf.body)
     )
   )
   await expect(protectedContainerDigests(input, [])).rejects.toThrow(
@@ -251,15 +249,13 @@ test.each([0, 2])(
     versions[100].name = root.digest
     versions[100].metadata.container.tags = ['latest']
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/container/nested%2Fimage/versions',
-        (req, res, ctx) =>
-          res(
-            ctx.json(
-              req.url.searchParams.get('page') === '1'
-                ? versions.slice(0, 100)
-                : versions.slice(100)
-            )
+        ({request}) =>
+          HttpResponse.json(
+            new URL(request.url).searchParams.get('page') === '1'
+              ? versions.slice(0, 100)
+              : versions.slice(100)
           )
       )
     )
@@ -295,13 +291,13 @@ test('a graph error prevents all DELETE requests', async () => {
     }
   ]
   server.use(
-    rest.get(
+    http.get(
       'https://api.github.com/users/test-owner/packages/container/nested%2Fimage/versions',
-      (_req, res, ctx) => res(ctx.json(versions))
+      () => HttpResponse.json(versions)
     ),
-    rest.delete('https://api.github.com/*', (_req, res, ctx) => {
+    http.delete('https://api.github.com/*', () => {
       deletes++
-      return res(ctx.status(204))
+      return new HttpResponse(null, {status: 204})
     })
   )
   documents.delete(attestation.digest)
@@ -313,10 +309,12 @@ test('a graph error prevents all DELETE requests', async () => {
 
 test('missing tag metadata fails before deletion', async () => {
   server.use(
-    rest.get(
+    http.get(
       'https://api.github.com/users/test-owner/packages/container/nested%2Fimage/versions',
-      (_req, res, ctx) =>
-        res(ctx.json([{id: 1, name: leaf.digest, created_at: '2000-01-01'}]))
+      () =>
+        HttpResponse.json([
+          {id: 1, name: leaf.digest, created_at: '2000-01-01'}
+        ])
     )
   )
   await expect(firstValueFrom(finalIds(new Input({...input})))).rejects.toThrow(
@@ -328,9 +326,7 @@ test.each([{}, {token: ''}, {token: 123}])(
   'rejects missing/invalid authentication token %#',
   async response => {
     server.use(
-      rest.get('https://ghcr.io/token', (_req, res, ctx) =>
-        res(ctx.json(response))
-      )
+      http.get('https://ghcr.io/token', () => HttpResponse.json(response))
     )
     await expect(protectedContainerDigests(input, [])).rejects.toThrow(
       'authentication failed'
@@ -340,8 +336,9 @@ test.each([{}, {token: ''}, {token: 123}])(
 
 test('does not expose invalid registry response bodies in errors', async () => {
   server.use(
-    rest.get('https://ghcr.io/token', (_req, res, ctx) =>
-      res(ctx.body('secret-test-token'))
+    http.get(
+      'https://ghcr.io/token',
+      () => new HttpResponse('secret-test-token')
     )
   )
   await expect(protectedContainerDigests(input, [])).rejects.toThrow(
@@ -351,22 +348,21 @@ test('does not expose invalid registry response bodies in errors', async () => {
 
 test('accepts an empty registry with no tagged roots', async () => {
   server.use(
-    rest.get(`${base}/tags/list`, (_req, res, ctx) =>
-      res(ctx.json({tags: null}))
-    )
+    http.get(`${base}/tags/list`, () => HttpResponse.json({tags: null}))
   )
   expect(await protectedContainerDigests(input, [])).toEqual(new Set())
 })
 
 test('rejects a looping tag pagination link', async () => {
   server.use(
-    rest.get(`${base}/tags/list`, (_req, res, ctx) =>
-      res(
-        ctx.set(
-          'Link',
-          '</v2/test-owner/nested/image/tags/list?n=100>; rel="next"'
-        ),
-        ctx.json({tags: []})
+    http.get(`${base}/tags/list`, () =>
+      HttpResponse.json(
+        {tags: []},
+        {
+          headers: {
+            Link: '</v2/test-owner/nested/image/tags/list?n=100>; rel="next"'
+          }
+        }
       )
     )
   )
@@ -382,10 +378,12 @@ test.each([
   'other container deletion modes retain missing-metadata behavior %#',
   async retention => {
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/container/nested%2Fimage/versions',
-        (_req, res, ctx) =>
-          res(ctx.json([{id: 1, name: leaf.digest, created_at: '2000-01-01'}]))
+        () =>
+          HttpResponse.json([
+            {id: 1, name: leaf.digest, created_at: '2000-01-01'}
+          ])
       )
     )
     expect(

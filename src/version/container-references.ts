@@ -1,5 +1,5 @@
 import {createHash} from 'crypto'
-import {request} from 'https'
+import https from 'https'
 import {Input} from '../input'
 import {RestVersionInfo} from './get-versions'
 
@@ -36,7 +36,7 @@ function digest(value: unknown): string {
 // Do not follow redirects or include response bodies/credentials in errors.
 async function get(url: URL, authorization: string): Promise<RegistryResponse> {
   return new Promise((resolve, reject) => {
-    const req = request(
+    const req = https.request(
       url,
       {headers: {Authorization: authorization, Accept: mediaTypes.join(', ')}},
       response => {

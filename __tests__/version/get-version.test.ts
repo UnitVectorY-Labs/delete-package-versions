@@ -1,4 +1,4 @@
-import {rest} from 'msw'
+import {http, HttpResponse} from 'msw'
 import {setupServer} from 'msw/node'
 import {
   getOldestVersions as _getOldestVersions,
@@ -25,11 +25,9 @@ describe('get versions tests -- mock rest', () => {
     const resp = getMockedVersionsResponse(numVersions)
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
-          return res(ctx.status(200), ctx.json(resp))
-        }
+        () => HttpResponse.json(resp)
       )
     )
 
@@ -54,11 +52,9 @@ describe('get versions tests -- mock rest', () => {
     process.env.GITHUB_API_URL = 'https://github.someghesinstance.com/api/v3'
 
     server.use(
-      rest.get(
+      http.get(
         'https://github.someghesinstance.com/api/v3/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
-          return res(ctx.status(200), ctx.json(resp))
-        }
+        () => HttpResponse.json(resp)
       )
     )
 
@@ -97,11 +93,9 @@ describe('get versions tests -- mock rest', () => {
     const resp = respTagged.concat(respUntagged)
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/container/test-package/versions',
-        (req, res, ctx) => {
-          return res(ctx.status(200), ctx.json(resp))
-        }
+        () => HttpResponse.json(resp)
       )
     )
 
@@ -129,14 +123,9 @@ describe('get versions tests -- mock rest', () => {
     const numVersions = 5
 
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
-          return res(
-            ctx.status(200),
-            ctx.json(getMockedVersionsResponse(numVersions))
-          )
-        }
+        () => HttpResponse.json(getMockedVersionsResponse(numVersions))
       )
     )
 
@@ -149,11 +138,9 @@ describe('get versions tests -- mock rest', () => {
 
   it('getOldestVersions -- API error', done => {
     server.use(
-      rest.get(
+      http.get(
         'https://api.github.com/users/test-owner/packages/npm/test-package/versions',
-        (req, res, ctx) => {
-          return res(ctx.status(500))
-        }
+        () => new HttpResponse(null, {status: 500})
       )
     )
 
